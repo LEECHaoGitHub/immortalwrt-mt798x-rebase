@@ -6,7 +6,7 @@ This repository is worked on ImmortalWrt with MTK OpenWrt Feeds patches imported
 
 ## Commit Cutoff Revisions
 
-### ImmortalWrt: [62bd6b3](https://github.com/immortalwrt/immortalwrt/commit/62bd6b3625b47308343252e7875107a8bd665765) - OpenWrt 25.12 SNAPSHOT
+### ImmortalWrt: [37013c8](https://github.com/immortalwrt/immortalwrt/commit/37013c8153ac6c9e11f4f9210d22832beb3bcb64)
 
 ```
 Merge Official Source
@@ -14,37 +14,38 @@ Merge Official Source
 Signed-off-by: Tianling Shen <cnsztl@immortalwrt.org>
 ```
 
-### MTK OpenWrt Feeds: [79b79ec](https://git01.mediatek.com/plugins/gitiles/openwrt/feeds/mtk-openwrt-feeds/+/79b79ece6267ea64db5dab853d4576d9b9c11889)
+### MTK OpenWrt Feeds: [a15454c](https://github.com/mediatek/mtk-openwrt-feeds/commit/a15454c888f4f4144c50e33b5feef4f247c5f78b)
 
 ```
-[][kernel][common][eth][Refactor the check condition from PSE_FC to GDM_RXFC in the QDMA Tx hang monitor]
+[kernel-6.12][common][hnat][Fix debugfs-configured PPE settings being lost after a NETSYS SER]
 
 [Description]
-Refactor the check condition from PSE_FC to GDM_RXFC in the QDMA Tx hang
-monitor.
-
-Some abnormal devices may send a large number of pause frames to the
-DUT, causing the DUT to repeatedly trigger NETSYS SER if the PSE always
-remains in the flow control condition.
+Fix debugfs-configured PPE settings being lost after a NETSYS SER.
 
 [Root Cause]
-PSE_FC status does not accurately reflect the actual state if the flow
-control status does not change from OFF to ON.
+A SER resets the PPE registers to hardware defaults, then
+hnat_warm_init() re-programs them via hnat_hw_init(), which used
+hardcoded constants and did not cover every register that debugfs can
+configure. Only the settings hnat_hw_init() already read back from
+hnat_priv survived, the rest reverted silently, and in some cases the
+software state in hnat_priv no longer matched the hardware.
 
 [Solution]
-Change the QDMA Tx hang check condition from PSE_FC to GDM_RXFC.
+Latch the affected settings in hnat_priv (defaults set in
+hnat_probe()) and program them from hnat_hw_init(), which is shared by
+the cold and warm init paths. Add helpers for the registers
+hnat_hw_init() did not cover, called from both hnat_hw_init() and the
+debugfs handlers so each setting has a single write path.
 
 [How to Verify]
-1. Perform the unbalanced PHY rate test to allow the traffic to occupy
-   many PSE pages.
-2. Sending a large number of pause frames to the DUT.
+Configure the settings through debugfs, dump the PPE registers,
+trigger a SER, then confirm the registers still hold.
 
 [Info to Customer]
 N/A
 
 
-Change-Id: I17e832fe84cf03087a12458bcf50fa1532b45de0
-Reviewed-on: https://gerrit.mediatek.inc/c/openwrt/feeds/mtk_openwrt_feeds/+/11959632
+Change-Id: I4cc44b41b1c1fdf229c0c393623ef820f06c9b9b
 ```
 
 ### l1parser: [081bb31](https://github.com/chasey-dev/l1parser/commit/081bb31211efc74594d25bfd1bb5811f3408a205)
